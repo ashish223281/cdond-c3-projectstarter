@@ -155,6 +155,7 @@ jobs:
       - run:
           name: Ensure front-end infrastructure exist
           command: |
+            yum -y install tar gzip
             aws cloudformation deploy \
               --template-file .circleci/files/frontend.yml \
               --tags project=udapeople-frontend \
