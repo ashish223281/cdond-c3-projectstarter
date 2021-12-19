@@ -223,6 +223,62 @@ jobs:
               curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "1" https://api.memstash.io/values/migration_${CIRCLE_WORKFLOW_ID}
             fi
 
+  deploy-frontend:
+    docker:
+      - image: amazon/aws-cli
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            yum -y install nodejs
+            yum -y install tar gzip
+      - run:
+          name: Get backend url
+          command: |
+            export BACKEND_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text)
+            export API_URL="http://${BACKEND_IP}:3030"
+            echo "API_URL = ${API_URL}"
+            echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
+            cat frontend/.env
+            cd frontend
+            npm install
+            npm run build
+            tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
+            aws s3 sync dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7}
+
+
+   deploy-backend:
+    docker:
+        - image: python:3.7-alpine3.11
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key
+      - attach_workspace:
+          at: ~/
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update tar gzip ansible nodejs npm
+            pip install awscli
+      - run:
+          name: Deploy backend
+          command: |
+            cd backend
+            npm i
+            npm run build
+            cd ..            
+            tar -C backend -czvf artifact.tar.gz .
+            cd .circleci/ansible
+            echo "Contents  of the inventory.txt file is -------"
+            cat inventory.txt 
+            ansible-playbook -i inventory.txt deploy-backend.yml
+
+  
 
 workflows:
   default:
@@ -241,6 +297,10 @@ workflows:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       - configure_infrastructure:
           requires: [deploy-infrastructure]  
-      - run-migrations:
-          requires: [configure_infrastructure]  
+#      - run-migrations:
+ #         requires: [configure_infrastructure] 
+      - deploy-frontend:
+          requires: [run-migrations]   
+      - deploy-backend:
+          requires: [run-migrations] 
                                           
