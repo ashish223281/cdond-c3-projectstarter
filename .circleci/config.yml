@@ -282,6 +282,39 @@ jobs:
             cat inventory.txt 
             ansible-playbook -i inventory.txt deploy-backend.yml
 
+  smoke-test:
+    docker:
+     - image: python:3.7-alpine3.11 
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --update curl nodejs npm
+            pip install awscli
+      - run:
+          name: Get backend url
+          command: |
+            BACKEND_IP=$(aws ec2 describe-instances \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query "Reservations[*].Instances[*].PublicIpAddress" \
+              --output text)
+            echo "http://${BACKEND_IP}:3030/api/status"
+            curl "http://${BACKEND_IP}:3030/api/status"
+      - run:
+          name: Backend smoke test.
+          command: |
+            # your code here
+      - run:
+          name: Frontend smoke test.
+          command: |
+            URL="http://udapeople-${CIRCLE_WORKFLOW_ID}.s3-website-us-east-1.amazonaws.com"
+            if curl -s ${URL} | grep "Welcome"
+            then
+            return 1
+            else
+            return 0
+            fi
   
 
 workflows:
@@ -305,4 +338,5 @@ workflows:
           requires: [configure_infrastructure]   
       - deploy-backend:
           requires: [configure_infrastructure] 
-                                          
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend]                                           
