@@ -13,6 +13,12 @@
   shell: |
     cd /home/ubuntu/backend
     npm install -g npm@latest
+    
+- name: Stop PM2
+  ignore_errors: yes
+  shell: |
+    pm2 stop backend
+    pm2 delete backend    
 
 - name: "install package dependencies"
   become: true
