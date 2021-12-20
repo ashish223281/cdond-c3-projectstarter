@@ -166,14 +166,16 @@ jobs:
                           
       - run:
           name: Add back-end ip to ansible inventory
+          working_directory: ./.circleci/ansible
           command: |
             aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text >> .circleci/ansible/inventory.txt
+              --output text >> inventory.txt
+            cat inventory
       - persist_to_workspace:
-          root: ~/
+          root: .
           paths:
-            - project/.circleci/ansible/inventory.txt
+            - .circleci/ansible/inventory.txt
 
                      
       # Here's where you will add some code to rollback on failure 
@@ -187,7 +189,7 @@ jobs:
       - add_ssh_keys:
           fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key
       - attach_workspace:
-          at: ~/
+          at: .
       - run:
           name: Install dependencies
           working_directory: ./.circleci/ansible
@@ -204,20 +206,8 @@ jobs:
             
       - run:
           name: Configure server
+          working_directory: ./.circleci/ansible
           command: |
-            echo ENVIROMENT=production > "backend/.env"
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-            cat backend/.env
-            ansible-galaxy install weareinteractive.environment
-            cd .circleci/ansible
             ansible-playbook -i inventory.txt configure-server.yml
 
   run-migrations:
@@ -228,7 +218,7 @@ jobs:
         - restore_cache:
             keys: [backend-build]
         - attach_workspace:
-            at: ~/
+            at: .
         - run:
             name: awscli install
             command: |
@@ -292,44 +282,33 @@ jobs:
 
   deploy-backend:
     docker:
-        - image: python:3.7-alpine3.11
+      - image: python:3.7-alpine3.11
     steps:
       - checkout
       - add_ssh_keys:
           fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key      
       - attach_workspace:
-          at: ~/
+          at: .
 
       - run:
           name: Install dependencies
+          working_directory: /tmp
           command: |
-            apk add --update ansible
-            apk add --update tar gzip curl
+            apk add --update tar gzip ansible nodejs npm
+            pip install awscli
             apk add --update openssh-client
       - run:
           name: Compress Backend
           command: |
-            echo ENVIROMENT=production > "backend/.env"
-            echo TYPEORM_CONNECTION=postgres >> "backend/.env"
-            echo TYPEORM_ENTITIES=./src/modules/domain/**/*.entity.ts >> "backend/.env"
-            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
-            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
-            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
-            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> "backend/.env"
-            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> "backend/.env"
-            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"
-            cat backend/.env
             tar -C backend -czvf artifact.tar.gz .
             ls -la
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - run:
           name: Deploy Backend
           no_output_timeout: 30m
           command: |
             ansible-galaxy install weareinteractive.environment
             cd .circleci/ansible
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i inventory.txt deploy-backend.yml      
+            ansible-playbook -i inventory.txt deploy-backend.yml      
 
 
   smoke-test:
@@ -418,8 +397,8 @@ workflows:
       #    requires: [configure-infrastructure]   
       #- deploy-frontend:
        #   requires: [run-migrations]   
-      - deploy-backend:
-          requires: [configure-infrastructure] 
+      #- deploy-backend:
+       #   requires: [configure-infrastructure] 
       #- smoke-test:
        #   requires: [deploy-backend, deploy-frontend] 
       #- cloudfront-update:
