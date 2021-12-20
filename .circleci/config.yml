@@ -167,11 +167,14 @@ jobs:
       - run:
           name: Add back-end ip to ansible inventory
           command: |
-            aws ec2 describe-instances \
+            BACKEND_AWS_PUBLIC_IP=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text >> inventory.txt
+              --output text)
+            echo "[all]" >> .circleci/ansible/inventory.txt
+            echo "$BACKEND_AWS_PUBLIC_IP" >> .circleci/ansible/inventory.txt              
             pwd
-            cat inventory.txt
+            cat .circleci/ansible/inventory.txt
+      - run: yum -y install tar gzip            
       - persist_to_workspace:
           root: ~/
           paths:
@@ -192,24 +195,17 @@ jobs:
           at: ~/
       - run:
           name: Install dependencies
-          working_directory: ./.circleci/ansible
           command: |
-            apk add --no-cache \
-                python3 \
-                py3-pip \
-            && pip3 install --upgrade pip \
-            && pip3 install \
-                awscli \
-            && rm -rf /var/cache/apk/*
-            apk add --update ansible
+            apk add --update curl nodejs npm ansible zip
+            pip install awscli
             ansible-galaxy install weareinteractive.environment
             
       - run:
           name: Configure server
           command: |
             pwd 
-            cat .circleci/ansible/inventory.txt
-            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
+            cat ~/project/.circleci/ansible//inventory.txt
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/playbook.yml
 
   run-migrations:
       docker:
