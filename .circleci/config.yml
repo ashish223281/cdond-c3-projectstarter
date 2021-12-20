@@ -210,7 +210,9 @@ jobs:
           command: |
             pwd &&
             cat inventory.txt
-            ansible-playbook -i inventory.txt configure-server.yml
+            cd /root/project
+            cat inventory.txt 
+            ansible-playbook -i /root/project/inventory.txt configure-server.yml
 
   run-migrations:
       docker:
