@@ -305,7 +305,7 @@ jobs:
             apk add --update tar gzip curl
             apk add --update openssh-client
       - run:
-          name: Deploy Backend
+          name: Compress Backend
           command: |
             echo ENVIROMENT=production > "backend/.env"
             echo TYPEORM_CONNECTION=postgres >> "backend/.env"
@@ -320,8 +320,13 @@ jobs:
             cat backend/.env
             tar -C backend -czvf artifact.tar.gz .
             ls -la
+      - run:
+          name: Deploy Backend
+          no_output_timeout: 30m
+          command: |
             ansible-galaxy install weareinteractive.environment
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i /tmp/.circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml      
+
 
   smoke-test:
     docker:
