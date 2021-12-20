@@ -295,7 +295,8 @@ jobs:
     steps:
       - checkout
       - add_ssh_keys:
-          fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key      - attach_workspace:
+          fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key      
+      - attach_workspace:
           at: /tmp/.circleci/ansible
 
       - run:
@@ -320,12 +321,14 @@ jobs:
             cat backend/.env
             tar -C backend -czvf artifact.tar.gz .
             ls -la
+            
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml
       - run:
           name: Deploy Backend
           no_output_timeout: 30m
           command: |
             ansible-galaxy install weareinteractive.environment
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml      
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i /tmp/.circleci/ansible/inventory.txt .circleci/ansible/deploy-backend.yml      
 
 
   smoke-test:
