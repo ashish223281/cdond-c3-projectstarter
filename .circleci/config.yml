@@ -173,7 +173,7 @@ jobs:
             pwd
             cat inventory.txt
       - persist_to_workspace:
-          root: ~/
+          root: ~
           paths:
             - project/.circleci/ansible/inventory.txt
 
@@ -189,7 +189,7 @@ jobs:
       - add_ssh_keys:
           fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key
       - attach_workspace:
-          at: .
+          at: ~/
       - run:
           name: Install dependencies
           working_directory: ./.circleci/ansible
@@ -206,13 +206,10 @@ jobs:
             
       - run:
           name: Configure server
-          working_directory: ./.circleci/ansible
           command: |
-            pwd &&
-            cat inventory.txt
-            cd /root/project
-            cat inventory.txt 
-            ansible-playbook -i /root/project/inventory.txt configure-server.yml
+            pwd 
+            cat .circleci/ansible/inventory.txt
+            ansible-playbook -i .circleci/ansible/inventory.txt .circleci/ansible/configure-server.yml
 
   run-migrations:
       docker:
