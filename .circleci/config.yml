@@ -215,7 +215,7 @@ jobs:
         - restore_cache:
             keys: [backend-build]
         - attach_workspace:
-            at: .
+            at: ~/
         - run:
             name: awscli install
             command: |
@@ -285,7 +285,7 @@ jobs:
       - add_ssh_keys:
           fingerprints: ["62:57:a7:2c:46:c1:08:b4:5c:2d:91:33:3b:c3:b8:08"] # You can get this ID in the section where you registered the SSH Key      
       - attach_workspace:
-          at: .
+          at: ~/
 
       - run:
           name: Install dependencies
@@ -304,8 +304,10 @@ jobs:
           no_output_timeout: 30m
           command: |
             ansible-galaxy install weareinteractive.environment
-            cd .circleci/ansible
-            ansible-playbook -i inventory.txt deploy-backend.yml      
+            pwd 
+            cat ~/project/.circleci/ansible//inventory.txt
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
+     
 
 
   smoke-test:
@@ -390,14 +392,14 @@ workflows:
           requires: [test-frontend, test-backend, scan-frontend, scan-backend]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
-     # - run-migrations:
-      #    requires: [configure-infrastructure]   
-      #- deploy-frontend:
-       #   requires: [run-migrations]   
-      #- deploy-backend:
-       #   requires: [configure-infrastructure] 
-      #- smoke-test:
-       #   requires: [deploy-backend, deploy-frontend] 
+      - run-migrations:
+          requires: [configure-infrastructure]   
+      - deploy-frontend:
+          requires: [run-migrations]   
+      - deploy-backend:
+          requires: [configure-infrastructure] 
+      - smoke-test:
+          requires: [deploy-backend, deploy-frontend] 
       #- cloudfront-update:
        #   requires: [smoke-test]           
                                                     
