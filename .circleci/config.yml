@@ -170,7 +170,6 @@ jobs:
             BACKEND_AWS_PUBLIC_IP=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
               --output text)
-            echo "[all]" >> .circleci/ansible/inventory.txt
             echo "$BACKEND_AWS_PUBLIC_IP" >> .circleci/ansible/inventory.txt              
             pwd
             cat .circleci/ansible/inventory.txt
