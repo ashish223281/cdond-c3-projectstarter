@@ -77,9 +77,7 @@ jobs:
             cd frontend
             npm install
             npm run test
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build
+
                 
   test-backend:
     docker:
@@ -94,17 +92,13 @@ jobs:
             cd backend
             npm install
             npm run test
-      - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build
+
 
   scan-frontend:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: [frontend-build]      
       - run:
           name: Test front-end
           command: |
@@ -112,17 +106,13 @@ jobs:
             npm install
             npm audit fix --audit-level=critical --force
             npm audit --audit-level=critical
-      - save_cache:
-          paths: [frontend/node_modules]
-          key: frontend-build
+
 
   scan-backend:
     docker:
       - image: circleci/node:13.8.0
     steps:
       - checkout
-      - restore_cache:
-          keys: [backend-build]      
       - run:
           name: Back-end Test
           command: |
@@ -131,9 +121,7 @@ jobs:
             npm audit fix --audit-level=critical --force
             npm audit fix --force
             npm audit --audit-level=critical
-      - save_cache:
-          paths: [backend/node_modules]
-          key: backend-build
+
 
   deploy-infrastructure:
     docker:
@@ -177,6 +165,9 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail            
 
                      
       # Here's where you will add some code to rollback on failure 
@@ -194,9 +185,7 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add --update curl nodejs npm ansible zip
-            pip install awscli
-            ansible-galaxy install weareinteractive.environment
+            apk add --update ansible
             
       - run:
           name: Configure server
@@ -204,14 +193,15 @@ jobs:
             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail
 
   run-migrations:
       docker:
         - image: circleci/node:13.8.0
       steps:
         - checkout
-        - restore_cache:
-            keys: [backend-build]
         - attach_workspace:
             at: ~/
         - run:
@@ -242,6 +232,12 @@ jobs:
               cat .env
               npm run build
               npm run migrations >> migrations_dump.txt
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail
+      - revert-migrations:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail              
 
   deploy-frontend:
     docker:
@@ -289,9 +285,13 @@ jobs:
           name: Install dependencies
           working_directory: ./.circleci/ansible  
           command: |
-            apk add --update tar gzip ansible nodejs npm
+            apk add --update ansible
+            apk add tar gzip
+            apk add curl
+            apk add gzip
+            apk add nodejs
+            apk add npm
             pip install awscli
-            apk add --update openssh-client
 
       - run:
           name: Set env
@@ -305,7 +305,7 @@ jobs:
             echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
             echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
             echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
-            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"      
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"     
       - run:
           name: Deploy Backend
           command: |
@@ -319,7 +319,12 @@ jobs:
             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
-     
+      - destroy-environment:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail
+      - revert-migrations:
+          id: ${CIRCLE_WORKFLOW_ID:0:7}
+          when: on_fail     
 
 
   smoke-test:
