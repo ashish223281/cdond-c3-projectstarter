@@ -294,16 +294,7 @@ jobs:
             apk add --update tar gzip ansible nodejs npm
             pip install awscli
             apk add --update openssh-client
-      - run:
-          name: Compress Backend
-          command: |
-            cd backend
-            npm i
-            npm run build
-            cd ..
-            tar -C backend -czvf artifact.tar.gz .
-            ls -la
-      - run:
+    - run:
           name: Set env
           command: |
             echo ENVIROMENT=$ENVIROMENT > "backend/.env"
@@ -318,15 +309,17 @@ jobs:
             echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"      
       - run:
           name: Deploy Backend
-          no_output_timeout: 30m
           command: |
-            ansible-galaxy install weareinteractive.environment
-            pwd 
+            cd backend
+            npm i
+            npm run build
+            cd ..
+            tar -C backend -czvf artifact.tar.gz .
+            ls -la
+             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
+            ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
      
-
-
   smoke-test:
     docker:
      - image: python:3.7-alpine3.11 
