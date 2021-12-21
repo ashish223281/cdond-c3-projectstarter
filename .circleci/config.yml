@@ -165,9 +165,7 @@ jobs:
           root: ~/
           paths:
             - project/.circleci/ansible/inventory.txt
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail            
+          
 
                      
       # Here's where you will add some code to rollback on failure 
@@ -193,9 +191,7 @@ jobs:
             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail
+
 
   run-migrations:
       docker:
@@ -232,12 +228,7 @@ jobs:
               cat .env
               npm run build
               npm run migrations >> migrations_dump.txt
-        - destroy-environment:
-            id: ${CIRCLE_WORKFLOW_ID:0:7}
-            when: on_fail
-        - revert-migrations:
-            id: ${CIRCLE_WORKFLOW_ID:0:7}
-            when: on_fail              
+            
 
   deploy-frontend:
     docker:
@@ -319,12 +310,7 @@ jobs:
             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
             ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
-      - destroy-environment:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail
-      - revert-migrations:
-          id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail     
+    
 
 
   smoke-test:
