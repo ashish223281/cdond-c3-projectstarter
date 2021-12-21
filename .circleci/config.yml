@@ -294,7 +294,8 @@ jobs:
             apk add --update tar gzip ansible nodejs npm
             pip install awscli
             apk add --update openssh-client
-    - run:
+
+      - run:
           name: Set env
           command: |
             echo ENVIROMENT=$ENVIROMENT > "backend/.env"
@@ -313,13 +314,16 @@ jobs:
             cd backend
             npm i
             npm run build
-            cd ..
+            cd..
             tar -C backend -czvf artifact.tar.gz .
-            ls -la
-             pwd 
+            ls -la          
+            
+            pwd 
             cat ~/project/.circleci/ansible//inventory.txt
             ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
      
+
+
   smoke-test:
     docker:
      - image: python:3.7-alpine3.11 
