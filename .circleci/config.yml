@@ -151,16 +151,18 @@ jobs:
           name: Ensure back-end infrastructure exists
           command: |
             aws cloudformation deploy \
+              --region us-east-1 \            
               --template-file .circleci/files/backend.yml \
-              --tags project=udapeople \
+              --tags project=udapeople-backend \
               --stack-name "udapeople-backend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  
       - run:
           name: Ensure front-end infrastructure exist
           command: |
             aws cloudformation deploy \
+              --region us-east-1 \            
               --template-file .circleci/files/frontend.yml \
-              --tags project=udapeople \
+              --tags project=udapeople-frontend \
               --stack-name "udapeople-frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"
                           
@@ -169,12 +171,13 @@ jobs:
           command: |
             BACKEND_AWS_PUBLIC_IP=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
-              --output text)
+              --output text \
+              --region us-east-1)
             echo "[all]" >> .circleci/ansible/inventory.txt              
             echo "$BACKEND_AWS_PUBLIC_IP" >> .circleci/ansible/inventory.txt              
             pwd
             cat .circleci/ansible/inventory.txt
-      - run: yum -y install tar gzip            
+                 
       - persist_to_workspace:
           root: ~/
           paths:
@@ -297,8 +300,25 @@ jobs:
       - run:
           name: Compress Backend
           command: |
+            cd backend
+            npm i
+            npm run build
+            cd..
             tar -C backend -czvf artifact.tar.gz .
             ls -la
+      - run:
+          name: Set env
+          command: |
+            echo ENVIROMENT=$ENVIROMENT > "backend/.env"
+            echo TYPEORM_CONNECTION=$TYPEORM_CONNECTION >> "backend/.env"
+            echo TYPEORM_MIGRATIONS_DIR=$TYPEORM_MIGRATIONS_DIR >> "backend/.env"
+            echo TYPEORM_ENTITIES=$TYPEORM_ENTITIES >> "backend/.env"
+            echo TYPEORM_MIGRATIONS=$TYPEORM_MIGRATIONS >> "backend/.env"
+            echo TYPEORM_HOST=$TYPEORM_HOST >> "backend/.env"
+            echo TYPEORM_PORT=$TYPEORM_PORT >> "backend/.env"
+            echo TYPEORM_USERNAME=$TYPEORM_USERNAME >> "backend/.env"
+            echo TYPEORM_PASSWORD=$TYPEORM_PASSWORD >> "backend/.env"
+            echo TYPEORM_DATABASE=$TYPEORM_DATABASE >> "backend/.env"      
       - run:
           name: Deploy Backend
           no_output_timeout: 30m
@@ -306,7 +326,7 @@ jobs:
             ansible-galaxy install weareinteractive.environment
             pwd 
             cat ~/project/.circleci/ansible//inventory.txt
-            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/configure-server.yml
+            ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -i ~/project/.circleci/ansible/inventory.txt ~/project/.circleci/ansible/deploy-backend.yml
      
 
 
