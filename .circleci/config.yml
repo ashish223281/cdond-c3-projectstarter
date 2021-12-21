@@ -330,8 +330,9 @@ jobs:
             BACKEND_IP=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
               --output text)
+            echo "------------------------------------"            
             echo "http://${BACKEND_IP}:3030/api/status"
-            curl "http://${BACKEND_IP}:3030/api/status"
+            echo "------------------------------------"            
             if curl "http://${BACKEND_IP}:3030/api/status" | grep "ok"
             then
                 return 0
