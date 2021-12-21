@@ -339,6 +339,10 @@ jobs:
                 return 1
             fi
       - run:
+          name: Backend smoke test.
+          command: |
+            # your code here            
+      - run:
           name: Frontend smoke test.
           command: |
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID}.s3-website-us-east-1.amazonaws.com"
@@ -346,7 +350,7 @@ jobs:
             then
             return 1
             else
-            return 1
+            return 0
             fi
   
 
@@ -395,9 +399,9 @@ workflows:
       - deploy-frontend:
           requires: [run-migrations]   
       - deploy-backend:
-          requires: [run-migrations] 
+          requires: [deploy-frontend] 
       - smoke-test:
           requires: [deploy-backend, deploy-frontend] 
-      - cloudfront-update:
-          requires: [smoke-test]           
+     # - cloudfront-update:
+      #    requires: [smoke-test]           
                                                     
