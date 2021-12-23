@@ -330,9 +330,8 @@ jobs:
             BACKEND_IP=$(aws ec2 describe-instances \
               --query "Reservations[*].Instances[*].PublicIpAddress" \
               --output text)
-            echo "------------------------------------"            
             echo "http://${BACKEND_IP}:3030/api/status"
-            echo "------------------------------------"            
+            curl "http://${BACKEND_IP}:3030/api/status"
             if curl "http://${BACKEND_IP}:3030/api/status" | grep "ok"
             then
                 return 0
@@ -346,19 +345,14 @@ jobs:
       - run:
           name: Frontend smoke test.
           command: |
-            URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com"
+            URL="http://udapeople-${CIRCLE_WORKFLOW_ID}.s3-website-us-east-1.amazonaws.com"
             if curl -s ${URL} | grep "Welcome"
             then
-            return 0
-            else
             return 1
+            else
+            return 0
             fi
-      - destroy-environment:
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail           
-      - revert-migrations  
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail      
+  
 
   cloudfront-update:
     docker:
@@ -368,25 +362,20 @@ jobs:
       - run:
           name: Install dependencies
           command: |
-            apk add nodejs
-            apk add npm
-            pip install awscli
+            curl -sL https://rpm.nodesource.com/setup_lts.x | bash -
+            yum -y install nodejs
+            yum -y install tar gzip
       - run:
           name: Update cloudfront distribution
           command: |
-            # your code here
-            aws cloudformation deploy \
-            --region us-east-1 \
+            curl -H "Content-Type: text/plain" -H "token: ${CIRCLE_WORKFLOW_ID}" --request PUT --data "${CIRCLE_WORKFLOW_ID}" https://api.memstash.io/values/workflow_${CIRCLE_WORKFLOW_ID}
+            aws cloudformation update-stack \
             --template-file .circleci/files/cloudfront.yml \
-            --stack-name=InitialStack \
-            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID}" \
-            --tags project=udapeople
+            --stack-name udapeople-cloudfront \
+            --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}"
       - destroy-environment:
           workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail           
-      - revert-migrations  
-          workflow_id: ${CIRCLE_WORKFLOW_ID:0:7}
-          when: on_fail 
+      - revert-migrations
 
 workflows:
   default:
@@ -413,6 +402,6 @@ workflows:
           requires: [deploy-frontend] 
       - smoke-test:
           requires: [deploy-backend, deploy-frontend] 
-      - cloudfront-update:
-          requires: [smoke-test]           
+     # - cloudfront-update:
+      #    requires: [smoke-test]           
                                                     
