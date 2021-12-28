@@ -336,7 +336,7 @@ jobs:
             then
                 return 0
             else
-                return 0
+                return 1
             fi
       - run:
           name: Backend smoke test.
@@ -348,7 +348,7 @@ jobs:
             URL="http://udapeople-${CIRCLE_WORKFLOW_ID:0:7}.s3-website-us-east-1.amazonaws.com"
             if curl -s ${URL} | grep "Welcome"
             then
-            return 0
+            return 1
             else
             return 1
             fi
