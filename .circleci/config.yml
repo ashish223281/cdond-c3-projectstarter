@@ -305,7 +305,7 @@ jobs:
             npm run build
             cp package* ./dist
             cd ..
-            tar -C backend -czvf artifact.tar.gz .
+            tar -C backend -czvf /root/project/artifact.tar.gz .
                     
             
             pwd 
